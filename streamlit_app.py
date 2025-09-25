@@ -2,6 +2,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle  # Missing import for render_payload_matplotlib
 import numpy as np
+import time
 from aamaze_mouse import AAMaze, AAMouse, get_default_maze, MAX_STEPS
 from aagentic_mouse import AAgenticMouse
 
@@ -64,6 +65,9 @@ def render_maze_matplotlib(maze_obj, mouse_obj):
 def main():
     st.set_page_config(layout="wide")
     st.title("AAMaze")
+
+    if 'aaversion' not in st.session_state:
+        st.session_state.aaversion = __version__
 
     # Initialize maze and mouse in session state (so they persist)
     if 'maze_obj' not in st.session_state:
@@ -153,6 +157,7 @@ def main():
 
                 # update left-column stream
                 reasoning_box.markdown(f"**Step Count**  \n\n{st.session_state.steps}  \n\n  **Last Step Reasoning:**  \n\n{reasoning_str}")
+                # time.sleep(0.1)
 
                 fig = render_payload_matplotlib(render_data)
                 maze_placeholder.pyplot(fig)

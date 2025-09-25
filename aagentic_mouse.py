@@ -181,7 +181,7 @@ class AAgenticMouse:
         obs_parts.append(f"facing={scan_info['absolute_direction']}")
 
         # Combine all parts with consistent formatting
-        return "Scan: " + ", ".join(obs_parts)
+        return "**Scan:** " + ", ".join(obs_parts)
 
     def _build_workflow(self) -> StateGraph:
         """
