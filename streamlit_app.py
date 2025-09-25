@@ -107,7 +107,7 @@ def main():
     st.session_state.at_goal, st.session_state.reasoning_str = False, ""
 
     # Split screen into two columns
-    left_col, right_col = st.columns(2)
+    left_col, right_col = st.columns([3,2])
 
     with left_col:
         st.subheader("Maze Solving Strategy")
