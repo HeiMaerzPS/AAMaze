@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from aamaze_mouse import AAMaze, AAMouse, get_default_maze, render_with_mouse
 
 # Constants and configuration
-MODEL = 'gpt-5-nano'  # Default OpenAI model
+MODEL = 'gpt-5-nano'  # Default OpenAI model 'gpt-4.1-nano'
 LOG_LEVEL = logging.WARNING
 __version__ = '20250925_1445'
 
@@ -564,7 +564,7 @@ Decision: [ahead/left/right/backtrack]"""
             lcl_goal = "Searching"
         lcl_end = time.time()
         lcl_mtime, lcl_ttime = lcl_end - lcl_start, lcl_end - self.start_time
-        total_steps = f"{lcl_goal}, Total Steps: {self.mouse.steps:>3}, Total Time: {lcl_ttime:.1f} seconds, Thinking Time: {lcl_mtime:.1f}"
+        total_steps = f"{lcl_goal}, Total Steps: {self.mouse.steps:>3}, Total Time: {lcl_ttime:.1f} seconds, Thinking Time: {lcl_mtime:.1f} seconds"
         return at_goal, total_steps, render_data, self.reasoning_output
 
     def render_at_start(self):

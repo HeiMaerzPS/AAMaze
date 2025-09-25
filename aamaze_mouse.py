@@ -9,7 +9,7 @@ from datetime import datetime
 
 import numpy as np
 
-__version__ = '20250925_1218'
+__version__ = '20250925_1534'
 
 MAX_STEPS = 5000
 JSON_OUT = True
@@ -97,8 +97,8 @@ def get_default_maze() -> Tuple[np.ndarray, Position, Position]:
             [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
             [1,1,1,0,1,0,1,1,1,0,1,0,1,0,1],
             [1,0,0,0,0,0,0,0,1,0,0,0,1,0,1],
-            # [1,0,1,1,1,1,0,1,1,1,0,1,1,0,1], # less solid wall
-            [1,1,1,1,1,1,1,1,1,1,0,1,1,0,1], # more solid wall
+            [1,0,1,1,1,1,0,1,1,1,0,1,1,0,1], # less solid wall
+            # [1,1,1,1,1,1,1,1,1,1,0,1,1,0,1], # more solid wall
             [1,0,1,0,0,0,0,0,0,1,0,0,0,0,1],
             [1,0,1,0,1,1,1,1,0,1,1,1,1,0,1],
             [1,0,0,0,1,0,0,0,0,0,0,0,1,0,1],
@@ -460,7 +460,16 @@ class AAMouse:
             True if a backtrack step was performed, False otherwise.
         """
         if len(self.trail) < 2:
-            return False
+            if not self.sense_wall_back():
+                return self.move(direction='back')
+            elif not self.sense_wall_ahead():
+                return self.move(direction='ahead')
+            elif not self.sense_wall_left():
+                return self.move(direction='left')
+            elif not self.sense_wall_right():
+                return self.move(direction='right')
+            else:
+                return False
 
         # Previous cell on path and vector from current -> previous
         (cr, cc) = self.pos
@@ -510,6 +519,13 @@ class AAMouse:
         """Check if there's a wall to the right."""
         right_dir = (self.direction + 1) % 4
         dr, dc = self.DIRECTIONS[self.DIR_ORDER[right_dir]]
+        next_pos = (self.pos[0] + dr, self.pos[1] + dc)
+        return not self.maze.is_free(pos=next_pos)
+
+    def sense_wall_back(self) -> bool:
+        """Check if there's a wall to the back."""
+        back_dir = (self.direction + 2) % 4
+        dr, dc = self.DIRECTIONS[self.DIR_ORDER[back_dir]]
         next_pos = (self.pos[0] + dr, self.pos[1] + dc)
         return not self.maze.is_free(pos=next_pos)
 
