@@ -9,7 +9,7 @@ from datetime import datetime
 
 import numpy as np
 
-__version__ = '20250924_0916'
+__version__ = '20250925_1218'
 
 MAX_STEPS = 5000
 JSON_OUT = True
@@ -603,6 +603,14 @@ class AAMouse:
         right_pos = (self.pos[0] + dr, self.pos[1] + dc)
         if self.maze.is_free(pos=right_pos):
             visited_counts["right"] = self.visit_counts[right_pos]
+
+        # Check back
+        back_dir_idx = (self.direction + 2) % 4  # 180 degrees opposite
+        back_dir = self.DIR_ORDER[back_dir_idx]
+        dr, dc = self.DIRECTIONS[back_dir]
+        back_pos = (self.pos[0] + dr, self.pos[1] + dc)
+        if self.maze.is_free(pos=back_pos):
+            visited_counts["backtrack"] = self.visit_counts[back_pos]
 
         visited_counts = {k:v for k,v in visited_counts.items() if v>0}
 

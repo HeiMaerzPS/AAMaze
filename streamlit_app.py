@@ -6,7 +6,7 @@ from aamaze_mouse import AAMaze, AAMouse, get_default_maze, MAX_STEPS
 from aagentic_mouse import AAgenticMouse
 
 MODEL = 'gpt-5-nano'
-__version__ = '20250924_1907'
+__version__ = '20250925_1219'
 
 
 def render_maze_matplotlib(maze_obj, mouse_obj):
@@ -152,7 +152,7 @@ def main():
                 st.session_state.reasoning_str = reasoning_str
 
                 # update left-column stream
-                reasoning_box.markdown(f"**Last Step Reasoning:**\n {reasoning_str}")
+                reasoning_box.markdown(f"**Step Count**  \n\n{st.session_state.steps}  \n\n  **Last Step Reasoning:**  \n\n{reasoning_str}")
 
                 fig = render_payload_matplotlib(render_data)
                 maze_placeholder.pyplot(fig)
