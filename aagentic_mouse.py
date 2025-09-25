@@ -22,7 +22,7 @@ from aamaze_mouse import AAMaze, AAMouse, get_default_maze, render_with_mouse
 # Constants and configuration
 MODEL = 'gpt-5-nano'  # Default OpenAI model 'gpt-4.1-nano'
 LOG_LEVEL = logging.WARNING
-__version__ = '20250925_1445'
+__version__ = '20250925_1557'
 
 # Regular expression to parse LLM action responses
 ACTION_RE = re.compile(
@@ -344,7 +344,7 @@ AVAILABLE MOVES:
 SENSOR INFORMATION GUIDE:
 - at_goal: whether you have reached the maze exit or goal
 - goal_direction: direction of the goal if it is in line of sight, only when it is in sight
-- walls: which directions are blocked by walls
+- walls: which directions are blocked by walls, a dead end is defined by walls ahead, left, and right
 - unvisited: which directions lead to places you've never been
 - visited_count: how many times you've been to neighboring positions (represents your "marks")
 - facing: your current compass direction (N/E/S/W)
