@@ -137,7 +137,7 @@ def main():
         if st.session_state.agent:
             maze_placeholder = st.empty()
 
-            reasoning_box.markdown(f"**AAgenticMouse** will run through the maze")
+            reasoning_box.markdown(f"**AAgenticMouse** will crawl the maze")
 
             # Initial render after instantiation
             render_data = st.session_state.agent.render_at_start()

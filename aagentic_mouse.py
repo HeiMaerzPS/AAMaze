@@ -5,9 +5,11 @@ AAgenticMouse - Step 1: Class structure with imports and method stubs
 # Standard library imports
 import json
 import re
+import os
 import logging
 import time
 from typing import TypedDict, List, Optional, Dict, Any, Tuple, Literal
+import streamlit as st
 
 # Third-party imports for the agentic framework
 from langgraph.graph import StateGraph, START, END
@@ -84,8 +86,8 @@ class AAgenticMouse:
         # Initialize LLM if needed
         self.llm = None
         if self.use_llm:
-            load_dotenv()
-            self.llm = ChatOpenAI(model=self.model, temperature=0)
+            API_TOKEN = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+            self.llm = ChatOpenAI(model=self.model, temperature=0, api_key=API_TOKEN)
         
         # State management
         self.reasoning_output = 'Start the AAgent'
@@ -580,6 +582,7 @@ Decision: [ahead/left/right/backtrack]"""
 def main():
     try:
         print(f"start maze v.{__version__}")
+        load_dotenv()
         # Create maze and mouse
         maze, start, goal = get_default_maze()
         maze_obj = AAMaze(maze=maze, start=start, goal=goal)
