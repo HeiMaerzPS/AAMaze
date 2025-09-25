@@ -8,7 +8,7 @@ from aagentic_mouse import AAgenticMouse
 
 MODEL = 'gpt-5-nano'
 MAX_STEPS = 128
-__version__ = '20250925_1557'
+__version__ = '20250925_1650'
 
 
 def render_maze_matplotlib(maze_obj, mouse_obj):
