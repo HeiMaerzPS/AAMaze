@@ -75,28 +75,33 @@ class AAgenticMouse:
             step_budget: Maximum steps before timeout
             model: OpenAI model to use if use_llm=True
         """
-        # Store core components
-        self.maze = maze
-        self.mouse = mouse
-        self.strategy = strategy
-        self.use_llm = use_llm
-        self.step_budget = step_budget
-        self.model = model
-        
-        # Initialize LLM if needed
-        self.llm = None
-        if self.use_llm:
-            API_TOKEN = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-            self.llm = ChatOpenAI(model=self.model, temperature=0, api_key=API_TOKEN)
-        
-        # State management
-        self.reasoning_output = 'Start the AAgent'
-        self.current_state = None
-        self.graph_app = None
-        self.is_initialized = False
-        
-        # Logging
-        self.logger = logger
+        try:
+            # Store core components
+            self.maze = maze
+            self.mouse = mouse
+            self.strategy = strategy
+            self.use_llm = use_llm
+            self.step_budget = step_budget
+            self.model = model
+            self.start_time = time.time()
+
+            # Initialize LLM if needed
+            self.llm = None
+            if self.use_llm:
+                API_TOKEN = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+                self.llm = ChatOpenAI(model=self.model, temperature=0, api_key=API_TOKEN)
+
+            # State management
+            self.reasoning_output = 'Start the AAgent'
+            self.current_state = None
+            self.graph_app = None
+            self.is_initialized = False
+
+            # Logging
+            self.logger = logger
+        except Exception as e:
+            self.logger.exception(f"{type(e).__name__}: {e}")
+            raise
         
         self.logger.debug(f"AAgenticMouse initialized with strategy: {strategy[:50]}...")
 
@@ -483,6 +488,7 @@ Decision: [ahead/left/right/backtrack]"""
         if not self.is_initialized:
             self._initialize_workflow()
 
+        lcl_start = time.time()
         # Check if we're already at goal or out of budget
         if self.current_state["scan_info"]["at_goal"]:
             self.logger.debug("Already at goal!")
@@ -552,7 +558,9 @@ Decision: [ahead/left/right/backtrack]"""
         # Log completion status
         if at_goal:
             self.logger.debug(f"GOAL REACHED! Total steps: {total_steps}")
-
+        lcl_end = time.time()
+        lcl_mtime, lcl_ttime = lcl_end - lcl_start, lcl_end - self.start_time
+        total_steps = f"Total Steps: {self.mouse.steps:>3}, Total Time: {lcl_ttime:.1f} seconds, Thinking Time: {lcl_mtime:1f}"
         return at_goal, total_steps, render_data, self.reasoning_output
 
     def render_at_start(self):

@@ -7,7 +7,8 @@ from aamaze_mouse import AAMaze, AAMouse, get_default_maze, MAX_STEPS
 from aagentic_mouse import AAgenticMouse
 
 MODEL = 'gpt-5-nano'
-__version__ = '20250925_1219'
+MAX_STEPS = 128
+__version__ = '20250925_1414'
 
 
 def render_maze_matplotlib(maze_obj, mouse_obj):
@@ -69,6 +70,21 @@ def main():
     if 'aaversion' not in st.session_state:
         st.session_state.aaversion = __version__
 
+    if 'llm_model' not in st.session_state:
+        try:
+            st.session_state.llm_model = st.secrets.get("LLM_MODEL") or MODEL
+        except Exception as e:
+            st.session_state.llm_model = MODEL
+
+    if 'max_steps' not in st.session_state:
+        try:
+            st.session_state.max_steps = int(st.secrets.get("MAX_STEPS") or MAX_STEPS)
+        except Exception as e:
+            st.session_state.max_steps = MAX_STEPS
+
+    if 'steps' not in st.session_state:
+        st.session_state.steps = 0
+
     # Initialize maze and mouse in session state (so they persist)
     if 'maze_obj' not in st.session_state:
         maze, start, goal = get_default_maze()
@@ -122,8 +138,8 @@ def main():
                     mouse=st.session_state.mouse_obj,
                     strategy=user_input.strip(),
                     use_llm=True,
-                    step_budget=500,
-                    model=MODEL
+                    step_budget=st.session_state.max_steps,
+                    model=st.session_state.llm_model
                 )
 
                 # Store the agent in session state
@@ -141,7 +157,7 @@ def main():
         if st.session_state.agent:
             maze_placeholder = st.empty()
 
-            reasoning_box.markdown(f"**AAgenticMouse** will crawl the maze")
+            reasoning_box.markdown(f"**AAgenticMouse** will crawl the maze using {st.session_state.llm_model}")
 
             # Initial render after instantiation
             render_data = st.session_state.agent.render_at_start()
@@ -150,13 +166,14 @@ def main():
             plt.close(fig)
 
             while not st.session_state.at_goal and st.session_state.steps < 500:
-                at_goal, steps, render_data, reasoning_str = st.session_state.agent.step()
+                st.session_state.steps += 1
+                at_goal, score, render_data, reasoning_str = st.session_state.agent.step()
                 st.session_state.at_goal = at_goal
-                st.session_state.steps = steps
+                # st.session_state.steps = steps
                 st.session_state.reasoning_str = reasoning_str
 
                 # update left-column stream
-                reasoning_box.markdown(f"**Step Count**  \n\n{st.session_state.steps}  \n\n  **Last Step Reasoning:**  \n\n{reasoning_str}")
+                reasoning_box.markdown(f"**Score**  \n\n{score}  \n\n  **Last Step Reasoning:**  \n\n{reasoning_str}")
                 # time.sleep(0.1)
 
                 fig = render_payload_matplotlib(render_data)
