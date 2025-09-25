@@ -22,7 +22,7 @@ from aamaze_mouse import AAMaze, AAMouse, get_default_maze, render_with_mouse
 # Constants and configuration
 MODEL = 'gpt-5-nano'  # Default OpenAI model
 LOG_LEVEL = logging.WARNING
-__version__ = '20250924_1759'
+__version__ = '20250925_1445'
 
 # Regular expression to parse LLM action responses
 ACTION_RE = re.compile(
@@ -342,7 +342,8 @@ AVAILABLE MOVES:
 - "backtrack" - retrace steps to previous position
 
 SENSOR INFORMATION GUIDE:
-- at_goal: whether you've reached the maze exit
+- at_goal: whether you have reached the maze exit or goal
+- goal_direction: direction of the goal if it is in line of sight, only when it is in sight
 - walls: which directions are blocked by walls
 - unvisited: which directions lead to places you've never been
 - visited_count: how many times you've been to neighboring positions (represents your "marks")
@@ -557,10 +558,13 @@ Decision: [ahead/left/right/backtrack]"""
 
         # Log completion status
         if at_goal:
+            lcl_goal = 'Goal Reached!'
             self.logger.debug(f"GOAL REACHED! Total steps: {total_steps}")
+        else:
+            lcl_goal = "Searching"
         lcl_end = time.time()
         lcl_mtime, lcl_ttime = lcl_end - lcl_start, lcl_end - self.start_time
-        total_steps = f"Total Steps: {self.mouse.steps:>3}, Total Time: {lcl_ttime:.1f} seconds, Thinking Time: {lcl_mtime:1f}"
+        total_steps = f"{lcl_goal}, Total Steps: {self.mouse.steps:>3}, Total Time: {lcl_ttime:.1f} seconds, Thinking Time: {lcl_mtime:.1f}"
         return at_goal, total_steps, render_data, self.reasoning_output
 
     def render_at_start(self):

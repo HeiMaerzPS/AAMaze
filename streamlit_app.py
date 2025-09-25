@@ -8,7 +8,7 @@ from aagentic_mouse import AAgenticMouse
 
 MODEL = 'gpt-5-nano'
 MAX_STEPS = 128
-__version__ = '20250925_1414'
+__version__ = '20250925_1445'
 
 
 def render_maze_matplotlib(maze_obj, mouse_obj):
@@ -104,7 +104,7 @@ def main():
     if 'agent' not in st.session_state:
         st.session_state.agent = None
 
-    st.session_state.at_goal, st.session_state.steps, st.session_state.reasoning_str = False, 0, ""
+    st.session_state.at_goal, st.session_state.reasoning_str = False, ""
 
     # Split screen into two columns
     left_col, right_col = st.columns(2)
@@ -165,7 +165,7 @@ def main():
             maze_placeholder.pyplot(fig)
             plt.close(fig)
 
-            while not st.session_state.at_goal and st.session_state.steps < 500:
+            while not st.session_state.at_goal and st.session_state.steps < st.session_state.max_steps:
                 st.session_state.steps += 1
                 at_goal, score, render_data, reasoning_str = st.session_state.agent.step()
                 st.session_state.at_goal = at_goal
