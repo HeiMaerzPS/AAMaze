@@ -8,7 +8,7 @@ from aagentic_mouse import AAgenticMouse
 
 MODEL = 'gpt-5-nano'
 MAX_STEPS = 128
-__version__ = '20250925_1650'
+__version__ = '20250925_1653'
 
 
 def render_maze_matplotlib(maze_obj, mouse_obj):
@@ -180,9 +180,8 @@ def main():
                 maze_placeholder.pyplot(fig)
                 plt.close(fig)
 
-        #         st.write(st.session_state.reasoning_str)
-        # else:
-        #     st.write(f"waiting for user input")
+            if not st.session_state.at_goal and st.session_state.steps >= st.session_state.max_steps:
+                st.error(f"Stopped: {st.session_state.steps}")
 
     st.divider()
 
