@@ -107,10 +107,10 @@ def main():
             plt.close(fig)
 
             while not st.session_state.at_goal and st.session_state.steps < st.session_state.max_steps:
-                st.session_state.steps += 1
-                at_goal, score, render_data, reasoning_str = st.session_state.agent.step()
+                # st.session_state.steps += 1
+                at_goal, steps, render_data, reasoning_str = st.session_state.agent.step()
                 st.session_state.at_goal = at_goal
-                # st.session_state.steps = steps
+                st.session_state.steps = steps
                 st.session_state.reasoning_str = reasoning_str
 
                 # update left-column stream
