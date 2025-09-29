@@ -23,7 +23,7 @@ from aamaze_mouse import AAMaze, AAMouse, get_default_maze, render_with_mouse
 # Constants and configuration
 MODEL = 'gpt-4.1-nano'  # Default OpenAI model 'gpt-4.1-nano' 'gpt-5-nano'
 LOG_LEVEL = logging.WARNING
-__version__ = '20250929_0944'
+__version__ = '20250929_1947'
 
 # Regular expression to parse LLM action responses
 ACTION_RE = re.compile(
@@ -37,6 +37,70 @@ logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s %(levelname)s [%(name)s]: %(message)s"
 )
+
+def main():
+    try:
+        print(f"start maze v.{__version__}")
+        load_dotenv()
+        # Create maze and mouse
+        maze, start, goal = get_default_maze()
+        maze_obj = AAMaze(maze=maze, start=start, goal=goal)
+        mouse = AAMouse(aamaze=maze_obj)
+
+        # Define strategy
+        strategy = (
+            "If you have a direction to the goal use it and go straight to the goal, ignore all other instructions. "
+            "Explore paths you have not been before, and if you have been in all directions before chose the one you been at least. "
+            "Backtrack only when blocked by walls. "
+            "If there is no unvisited path available choose the direction with the lowest count of previous visits. "
+        )
+
+        # Create agentic mouse
+        agent = AAgenticMouse(
+            maze=maze_obj,
+            mouse=mouse,
+            strategy=strategy,
+            use_llm=True  # Start with rule-based for testing
+        )
+
+        # Test the step method
+        aard = agent.get_status()
+        print(f"{aard}\n")
+        print(render_with_mouse(maze=maze_obj, mouse=mouse))
+        at_goal, steps, render_data, reasoning_str = agent.step()
+        # scan_result = agent._perform_scan()
+        # formatted_scan = agent._format_scan_observation(scan_info=scan_result)
+
+        # Continue until goal reached
+        while not at_goal:
+            aard = agent.get_status()
+            print(f"{aard}\n")
+            print(render_with_mouse(maze=maze_obj, mouse=mouse))
+
+            aard = agent.get_final_status()
+            aard = agent.get_final_status(max_steps=999)
+
+            # Safety check - avoid infinite loops
+            if steps >= agent.step_budget:
+                print(f"\nStep budget exceeded ({agent.step_budget} steps)")
+                break
+
+            # Execute next step
+            at_goal, steps, render_data, reasoning_str = agent.step()
+
+        # Show final result
+        print(f"\nMouse steps: {steps}")
+        print(render_with_mouse(maze=maze_obj, mouse=mouse))
+
+        if at_goal:
+            print(f"\nSUCCESS! Goal reached in {steps} mouse steps!")
+        else:
+            print(f"\nStopped after {steps} mouse steps and {agent.agent_steps} agent decisions")
+
+        return True
+    except Exception as e:
+        logger.exception(f"Error in main: {e}")
+        return False
 
 # State definition for the LangGraph workflow
 class MazeState(TypedDict):
@@ -101,7 +165,7 @@ class AAgenticMouse:
                 self.llm = ChatOpenAI(model=self.model, temperature=0, api_key=lcl_api_token)
 
             # State management
-            self.reasoning_output = 'Start the AAgent'
+            self.reasoning_output = 'Start the AA Agent'
             self.current_state = None
             self.graph_app = None
             self.is_initialized = False
@@ -338,7 +402,11 @@ class AAgenticMouse:
             prompt = f"""You are navigating a maze. Your task is to follow this specific strategy:
 
 STRATEGY:
-'{strategy}'
+"{strategy}"
+
+TERMINOLOGY NOTE: 
+In this maze, "goal" and "customer" refer to the same thing - your destination: the maze exit or goal. 
+You may see either term used interchangeably.
 
 CURRENT SITUATION:
 {current_observation}
@@ -349,8 +417,6 @@ CURRENT SITUATION GUIDE:
 - walls: which relative directions are blocked by walls (a dead end = walls ahead, left, and right)
 - unvisited: which relative directions lead to places you have never been
 - visited_count: how many times you've been to neighboring positions (your "marks")
-- compass_heading: your current absolute orientation (N/E/S/W) - FOR REFERENCE ONLY
-- compass_to_direction_mapping: shows how compass directions map to your relative directions - FOR REFERENCE ONLY
 
 RECENT ACTIONS: 
 {history_text}
@@ -362,19 +428,13 @@ You MUST choose moves based on your relative position (where you're facing):
 - "left" - turn left and move forward  
 - "right" - turn right and move forward
 - "backtrack" - retrace steps to previous position
-**DO NOT use compass directions (N/E/S/W) as commands. They are only provided as reference information.**
-
-RULES
-1) Decide using **relative** moves only. Output one of: ahead, left, right, backtrack.
-2) Use compass data only as extra context. If needed, translate compass labels via `available_compass_heading` into relative terms. Do not mention compass labels in the Decision.
 
 INSTRUCTIONS:
-1. Read your strategy carefully and understand what it tells you to do
+1. Read your strategy carefully and understand what it tells you to do. 
 2. Analyze your current situation using the sensor information
 3. Apply your strategy to decide which move to make
 4. When reasoning, think in terms of relative directions (ahead/left/right/backtrack)
-5. If you need to use compass information, translate it to relative directions using the mapping provided
-6. Choose exactly ONE move from: ahead, left, right, or backtrack
+5. Choose exactly ONE move from: ahead, left, right, or backtrack
 
 RESPONSE FORMAT:
 Reasoning: [Your step-by-step analysis applying the strategy to current situation, using relative directions]
@@ -532,10 +592,12 @@ Decision: [ahead/left/right/backtrack]
         status_output = []
 
         if scan['at_goal']:
-            status_output.append("**Goal Reached!**")
+            status_output.append("**Customer reached!**")
         else:
             if max_steps is not None:
-                status_output.append(f"**Max steps {max_steps} exceeded!**")
+                status_output.append(f"**Customer not reached within {max_steps} steps!**")
+            else:
+                status_output.append(f"**Customer not reached within maximum steps!**")
 
         lcl_time_total = self.time_step_end - self.time_start
         status_output.append(f"Total Steps: {self.mouse.steps}, Total Time: {lcl_time_total:.1f} seconds")
@@ -547,7 +609,7 @@ Decision: [ahead/left/right/backtrack]
         scan = self._perform_scan()
         status_output = []
         if scan['at_goal']:
-            status_output.append("**Goal Reached!**")
+            status_output.append("**Customer Reached!**")
             lcl_time_label = 'Total Time'
         else:
             lcl_time_label = 'Elapsed Time'
@@ -556,20 +618,20 @@ Decision: [ahead/left/right/backtrack]
         status_output.append(f"Total Steps: {self.mouse.steps:>3}, {lcl_time_label}: {lcl_time_total:.1f} seconds, Last Reasoning: {lcl_time_step:.1f} seconds.")
 
         if scan['goal_visible'] and scan['goal_dir']:
-            status_output.append(f"**Goal in line-of-sight**, direction: {scan['goal_dir']}")
+            status_output.append(f"**Customer in line-of-sight**, direction: {scan['goal_dir']}")
 
         lcl_walls, lcl_unvisited, lcl_visited = ', '.join(scan['walls']), ', '.join(scan['unvisited']), ' ,'.join([f"{k}={v}" for k,v in scan['visited_count'].items()])
         aardvark = []
         if lcl_walls:
-            aardvark.append(f"Walls: {lcl_walls}")
+            aardvark.append(f"Walls: [{lcl_walls}]")
         if lcl_unvisited:
-            aardvark.append(f"Unvisited path: {lcl_unvisited}")
+            aardvark.append(f"Unvisited path: [{lcl_unvisited}]")
         if lcl_visited:
-            aardvark.append(f"Traversed path with count: {lcl_visited}")
+            aardvark.append(f"Traversed path with count: [{lcl_visited}]")
         if aardvark:
             status_output.append(f"**Scan:** {'. '.join(aardvark)}.")
-        lcl_moves = [f"{v} ({k})" for k,v in scan['compass'].items()]
-        status_output.append(f"**Compass:** Facing {scan['absolute_direction']}. Available moves: {', '.join(lcl_moves)}.")
+        # lcl_moves = [f"{v} ({k})" for k,v in scan['compass'].items()]
+        # status_output.append(f"**Compass:** Facing {scan['absolute_direction']}. Available moves: {', '.join(lcl_moves)}.")
 
         status_str = '\n\n'.join(status_output)
         return status_str
@@ -675,72 +737,6 @@ Decision: [ahead/left/right/backtrack]
 
     def render_at_start(self):
         return self.maze.prepare_render(mouse=self.mouse)
-
-
-def main():
-    try:
-        print(f"start maze v.{__version__}")
-        load_dotenv()
-        # Create maze and mouse
-        maze, start, goal = get_default_maze()
-        maze_obj = AAMaze(maze=maze, start=start, goal=goal)
-        mouse = AAMouse(aamaze=maze_obj)
-
-        # Define strategy
-        strategy = (
-            "Walk into the maze and keep moving forward until you cannot go further. "
-            "Each time you walk down a passage, make a small mark on it. "
-            "If you reach a dead end, turn around and go back the way you came."
-        )
-
-        # Create agentic mouse
-        agent = AAgenticMouse(
-            maze=maze_obj,
-            mouse=mouse,
-            strategy=strategy,
-            use_llm=True  # Start with rule-based for testing
-        )
-
-        # Test the step method
-        aard = agent.get_status()
-        print(f"{aard}\n")
-        print(render_with_mouse(maze=maze_obj, mouse=mouse))
-        at_goal, steps, render_data, reasoning_str = agent.step()
-        # scan_result = agent._perform_scan()
-        # formatted_scan = agent._format_scan_observation(scan_info=scan_result)
-
-        # Continue until goal reached
-        while not at_goal:
-            aard = agent.get_status()
-            print(f"{aard}\n")
-            print(render_with_mouse(maze=maze_obj, mouse=mouse))
-
-            aard = agent.get_final_status()
-            aard = agent.get_final_status(max_steps=999)
-
-            # Safety check - avoid infinite loops
-            if steps >= agent.step_budget:
-                print(f"\nStep budget exceeded ({agent.step_budget} steps)")
-                break
-
-            # Execute next step
-            at_goal, steps, render_data, reasoning_str = agent.step()
-
-        # Show final result
-        print(f"\nMouse steps: {steps}")
-        print(render_with_mouse(maze=maze_obj, mouse=mouse))
-
-        if at_goal:
-            print(f"\nSUCCESS! Goal reached in {steps} mouse steps!")
-        else:
-            print(f"\nStopped after {steps} mouse steps and {agent.agent_steps} agent decisions")
-
-        return True
-    except Exception as e:
-        logger.exception(f"Error in main: {e}")
-        return False
-
-
 
 if __name__ == "__main__":
     main()

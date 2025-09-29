@@ -9,7 +9,7 @@ from datetime import datetime
 
 import numpy as np
 
-__version__ = '20250926_0917'
+__version__ = '20250929_1947'
 
 MAX_STEPS = 5000
 JSON_OUT = True

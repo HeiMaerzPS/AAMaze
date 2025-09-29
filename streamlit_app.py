@@ -8,7 +8,7 @@ from aagentic_mouse import AAgenticMouse
 
 MODEL = 'gpt-4.1-nano' #'gpt-5-nano' 'gpt-4.1-nano'
 MAX_STEPS = 128
-__version__ = '20250929_0944'
+__version__ = '20250929_1947'
 
 
 def main():
@@ -59,15 +59,11 @@ def main():
         # Simple start button with state-aware behavior
         if st.button("Start Solving"):
             if user_input.strip():
-                # Reset all state for fresh solving attempt
-                st.session_state.solving_active = True
-                st.session_state.solve_complete = False
-                st.session_state.completion_reason = ""
-
                 # Reset maze and mouse to starting positions
                 maze, start, goal = get_default_maze()
                 st.session_state.maze_obj = AAMaze(maze=maze, start=start, goal=goal)
                 st.session_state.mouse_obj = AAMouse(aamaze=st.session_state.maze_obj, max_steps=MAX_STEPS)
+                st.session_state.steps = 0
 
                 # Instantiate AAgenticMouse with the user's strategy
                 agent = AAgenticMouse(
@@ -101,7 +97,7 @@ def main():
             mouse_state = st.session_state.agent.get_status()
             # st.session_state.mouse_state = mouse_state
             mouse_state_box.markdown(mouse_state)
-            reasoning_str=f"**AAgenticMouse** will crawl the maze using {st.session_state.llm_model}"
+            reasoning_str=f"**AA Agentic** will search for the customer using {st.session_state.llm_model}"
             reasoning_box.markdown(reasoning_str)
 
             # Initial render after instantiation
@@ -128,8 +124,10 @@ def main():
                 maze_placeholder.pyplot(fig)
                 plt.close(fig)
 
-            if not st.session_state.at_goal and st.session_state.steps >= st.session_state.max_steps:
-                st.error(f"Stopped: {st.session_state.steps}")
+    if st.session_state.at_goal:
+        st.success("You have reached the customer!")
+    elif st.session_state.steps >= st.session_state.max_steps:
+        st.error(f"You have not reached the customer within {st.session_state.max_steps} steps")
 
     st.divider()
 
