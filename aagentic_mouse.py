@@ -8,6 +8,7 @@ import re
 import os
 import logging
 import time
+import copy
 from typing import TypedDict, List, Optional, Dict, Any, Tuple, Literal
 import streamlit as st
 
@@ -21,8 +22,8 @@ from aamaze_mouse import AAMaze, AAMouse, get_default_maze, render_with_mouse
 
 # Constants and configuration
 MODEL = 'gpt-5-nano'  # Default OpenAI model 'gpt-4.1-nano'
-LOG_LEVEL = logging.WARNING
-__version__ = '20250925_1650'
+LOG_LEVEL = logging.INFO
+__version__ = '20250926_0917'
 
 # Regular expression to parse LLM action responses
 ACTION_RE = re.compile(
@@ -76,6 +77,7 @@ class AAgenticMouse:
             model: OpenAI model to use if use_llm=True
         """
         try:
+            self.logger = logger or logging.getLogger(f"{__name__}.AAMaze")
             # Store core components
             self.maze = maze
             self.mouse = mouse
@@ -83,22 +85,26 @@ class AAgenticMouse:
             self.use_llm = use_llm
             self.step_budget = step_budget
             self.model = model
-            self.start_time = time.time()
+            self.time_start = time.time()
+            self.time_step_start, self.time_step_end = copy.deepcopy(self.time_start), copy.deepcopy(self.time_start)
 
             # Initialize LLM if needed
             self.llm = None
             if self.use_llm:
-                API_TOKEN = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-                self.llm = ChatOpenAI(model=self.model, temperature=0, api_key=API_TOKEN)
+                lcl_api_token = None
+                try:
+                    lcl_api_token = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+                except Exception as e:
+                    load_dotenv()
+                    lcl_api_token = os.getenv("OPENAI_API_KEY")
+
+                self.llm = ChatOpenAI(model=self.model, temperature=0, api_key=lcl_api_token)
 
             # State management
             self.reasoning_output = 'Start the AAgent'
             self.current_state = None
             self.graph_app = None
             self.is_initialized = False
-
-            # Logging
-            self.logger = logger
         except Exception as e:
             self.logger.exception(f"{type(e).__name__}: {e}")
             raise
@@ -131,6 +137,7 @@ class AAgenticMouse:
         visited = self.mouse.sense_visited_directions()  # Returns {'direction': count}
         absolute_direction = self.mouse.sense_absolute_direction()  # Returns 'N'/'E'/'S'/'W'
         walls = self.mouse.sense_walls()  # Returns ['ahead', 'left', 'right']
+        compass = self.mouse.sense_compass()
         loop = self.mouse.sense_loop_detected()
         stuck = self.mouse.sense_stuck()
 
@@ -143,6 +150,7 @@ class AAgenticMouse:
             "unvisited": unvisited,
             "visited_count": visited,
             "absolute_direction": absolute_direction,
+            "compass": compass,
             "loop": loop,
             "stuck": stuck,
         }
@@ -183,7 +191,9 @@ class AAgenticMouse:
             obs_parts.append(f"visited_count=[none]")
 
         # Always include absolute direction for orientation
-        obs_parts.append(f"facing={scan_info['absolute_direction']}")
+        obs_parts.append(f"compass_heading={scan_info['absolute_direction']}")
+        lcl_compass_heading = [f"{v}={k}" for k,v in scan_info['compass'].items()]
+        obs_parts.append(f"available_compass_heading: [{', '.join(lcl_compass_heading)}]")
 
         # Combine all parts with consistent formatting
         return "**Scan:** " + ", ".join(obs_parts)
@@ -320,8 +330,8 @@ class AAgenticMouse:
             # Create the current observation string for the LLM
             current_observation = self._format_scan_observation(scan_info)
 
-            # Create recent history context (last 3 actions)
-            recent_history = history[-3:] if len(history) >= 3 else history
+            # Create recent history context (last 8 actions)
+            recent_history = history[-8:] if len(history) >= 8 else history
             history_text = ", ".join(recent_history) if recent_history else "just started"
 
             # Build comprehensive prompt for the LLM
@@ -343,11 +353,12 @@ AVAILABLE MOVES:
 
 SENSOR INFORMATION GUIDE:
 - at_goal: whether you have reached the maze exit or goal
-- goal_direction: direction of the goal if it is in line of sight, only when it is in sight
+- goal_direction: direction of the goal if it is in line of sight, **only** when the goal is in sight
 - walls: which directions are blocked by walls, a dead end is defined by walls ahead, left, and right
-- unvisited: which directions lead to places you've never been
+- unvisited: which directions lead to places you have never been
 - visited_count: how many times you've been to neighboring positions (represents your "marks")
-- facing: your current compass direction (N/E/S/W)
+- compass_heading: your current compass heading (N/E/S/W)
+- available_compass_heading: available compass heading and direction
 
 INSTRUCTIONS:
 1. Read your strategy carefully and understand what it tells you to do
@@ -375,7 +386,7 @@ Decision: [ahead/left/right/backtrack]"""
 
             llm_output = response.content if hasattr(response, 'content') else str(response)
 
-            self.reasoning_output = f"{self._format_scan_observation(scan_info=scan_info)}\n{llm_output}"
+            self.reasoning_output = llm_output
             self.logger.debug(f"LLM Response:\n{llm_output}")
 
             # Parse the LLM response to extract the decision
@@ -468,6 +479,36 @@ Decision: [ahead/left/right/backtrack]"""
         self.is_initialized = True
         self.logger.debug("Workflow initialization complete")
 
+    def get_status(self):
+        scan = self._perform_scan()
+        status_output = []
+        if scan['at_goal']:
+            status_output.append("**Goal Reached!**")
+            lcl_time_label = 'Elapsed Time'
+        else:
+            lcl_time_label = 'Total Time'
+
+        if scan['goal_visible'] and scan['goal_dir']:
+            status_output.append(f"Goal in line-of-sight, direction: {scan['goal_dir']}")
+
+        lcl_time_total, lcl_time_step = self.time_step_end - self.time_start, self.time_step_end - self.time_step_start
+        status_output.append(f"Total Steps: {self.mouse.steps:>3}, {lcl_time_label}: {lcl_time_total:.1f} seconds, Last Reasoning: {lcl_time_step:.1f} seconds.")
+        lcl_walls, lcl_unvisited, lcl_visited = ', '.join(scan['walls']), ', '.join(scan['unvisited']), ' ,'.join([f"{k}={v}" for k,v in scan['visited_count'].items()])
+        aardvark = []
+        if lcl_walls:
+            aardvark.append(f"Walls: {lcl_walls}")
+        if lcl_unvisited:
+            aardvark.append(f"Unvisited path: {lcl_unvisited}")
+        if lcl_visited:
+            aardvark.append(f"Traversed path with count: {lcl_visited}")
+        if aardvark:
+            status_output.append(f"**Scan:** {'. '.join(aardvark)}.")
+        lcl_moves = [f"{v} ({k})" for k,v in scan['compass'].items()]
+        status_output.append(f"**Compass:** Facing {scan['absolute_direction']}. Available moves: {', '.join(lcl_moves)}.")
+
+        status_str = '\n\n'.join(status_output)
+        return status_str
+
     def step(self) -> Tuple[bool, int, Dict, Optional[str]]:
         """
         Execute one decision-making cycle of the agent.
@@ -489,7 +530,7 @@ Decision: [ahead/left/right/backtrack]"""
         if not self.is_initialized:
             self._initialize_workflow()
 
-        lcl_start = time.time()
+        self.time_step_start = time.time()
         # Check if we're already at goal or out of budget
         if self.current_state["scan_info"]["at_goal"]:
             self.logger.debug("Already at goal!")
@@ -562,33 +603,13 @@ Decision: [ahead/left/right/backtrack]"""
             self.logger.debug(f"GOAL REACHED! Total steps: {total_steps}")
         else:
             lcl_goal = "Searching"
-        lcl_end = time.time()
-        lcl_mtime, lcl_ttime = lcl_end - lcl_start, lcl_end - self.start_time
-        total_steps = f"{lcl_goal}, Total Steps: {self.mouse.steps:>3}, Total Time: {lcl_ttime:.1f} seconds, Last Reasoning: {lcl_mtime:.1f} seconds"
+        self.time_step_end = time.time()
+        # lcl_mtime, lcl_ttime = self.time_step_end - self.time_step_end, self.time_step_end - self.time_start
+        # total_steps = f"{lcl_goal}, Total Steps: {self.mouse.steps:>3}, Total Time: {lcl_ttime:.1f} seconds, Last Reasoning: {lcl_mtime:.1f} seconds"
         return at_goal, total_steps, render_data, self.reasoning_output
 
     def render_at_start(self):
         return self.maze.prepare_render(mouse=self.mouse)
-
-    def step_old(self) -> Tuple[bool, int, Dict]:
-        """
-        Execute one decision-making cycle of the agent.
-        
-        Returns:
-            Tuple containing:
-            - bool: True if mouse has reached the goal
-            - int: Total number of steps taken by the mouse
-            - Dict: Render data from maze.prepare_render(mouse) for visualization
-        """
-        # TODO: Implementation will go here
-        # For now, return placeholder values
-        at_goal = self.mouse.sense_at_goal()
-        total_steps = self.mouse.steps
-        render_data = self.maze.prepare_render(mouse=self.mouse)
-        
-        self.logger.debug(f"Step executed: at_goal={at_goal}, steps={total_steps}")
-        
-        return at_goal, total_steps, render_data
 
 
 def main():
@@ -616,6 +637,8 @@ def main():
         )
 
         # Test the step method
+        aard = agent.get_status()
+        print(f"{aard}\n")
         print(render_with_mouse(maze=maze_obj, mouse=mouse))
         at_goal, steps, render_data, reasoning_str = agent.step()
         # scan_result = agent._perform_scan()
@@ -623,7 +646,8 @@ def main():
 
         # Continue until goal reached
         while not at_goal:
-            print(f"Mouse steps: {steps},\nreasoning: '{reasoning_str}'\n")
+            aard = agent.get_status()
+            print(f"{aard}\n")
             print(render_with_mouse(maze=maze_obj, mouse=mouse))
 
             # Safety check - avoid infinite loops

@@ -6,69 +6,18 @@ import time
 from aamaze_mouse import AAMaze, AAMouse, get_default_maze, MAX_STEPS
 from aagentic_mouse import AAgenticMouse
 
-MODEL = 'gpt-5-nano'
+MODEL = 'gpt-4.1-nano' #'gpt-5-nano' 'gpt-4.1-nano'
 MAX_STEPS = 128
-__version__ = '20250925_1653'
-
-
-def render_maze_matplotlib(maze_obj, mouse_obj):
-    """Render maze using matplotlib with walls, free spaces, start, goal, and mouse."""
-    fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-
-    # Get maze dimensions
-    rows, cols = maze_obj.maze.shape
-
-    # Display the maze (0=white/free, 1=black/wall)
-    ax.imshow(maze_obj.maze, cmap='gray_r', interpolation='nearest')
-
-    # Mark visited cells (light gray dots) - equivalent to "." in ASCII
-    for pos in mouse_obj.visited:
-        if pos != mouse_obj.pos and pos != maze_obj.start and pos != maze_obj.goal:
-            r, c = pos
-            ax.add_patch(plt.Circle((c, r), 0.15, color='lightgray', alpha=0.7))
-
-    # Mark trail (yellow stars) - equivalent to "*" in ASCII
-    for pos in mouse_obj.trail:
-        if pos != mouse_obj.pos and pos != maze_obj.start and pos != maze_obj.goal:
-            r, c = pos
-            ax.plot(c, r, marker='*', color='gold', markersize=12, alpha=0.8)
-
-    # Mark start position (green circle)
-    start_r, start_c = maze_obj.start
-    ax.add_patch(plt.Circle((start_c, start_r), 0.3, color='green', alpha=0.8))
-    ax.text(start_c, start_r, 'S', ha='center', va='center', fontsize=12, fontweight='bold', color='white')
-
-    # Mark goal position (red circle)
-    goal_r, goal_c = maze_obj.goal
-    ax.add_patch(plt.Circle((goal_c, goal_r), 0.3, color='red', alpha=0.8))
-    ax.text(goal_c, goal_r, 'G', ha='center', va='center', fontsize=12, fontweight='bold', color='white')
-
-    # Mark mouse position (blue circle)
-    mouse_r, mouse_c = mouse_obj.pos
-    ax.add_patch(plt.Circle((mouse_c, mouse_r), 0.3, color='blue', alpha=0.8))
-    ax.text(mouse_c, mouse_r, 'M', ha='center', va='center', fontsize=12, fontweight='bold', color='white')
-
-    # Set up the plot
-    ax.set_xlim(-0.5, cols - 0.5)
-    ax.set_ylim(rows - 0.5, -0.5)  # Invert y-axis to match array indexing
-    ax.set_xticks(range(cols))
-    ax.set_yticks(range(rows))
-    ax.grid(True, alpha=0.3)
-    ax.set_aspect('equal')
-    for sp in ax.spines.values():
-        sp.set_visible(False)
-    ax.set_title('AAMaze')
-
-    plt.tight_layout()
-    return fig
+__version__ = '20250926_0917'
 
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("AAMaze")
+    st.image("AA_large.png", width=64)
+    st.title("The AA AI Breakdown Challenge")
 
-    if 'aaversion' not in st.session_state:
-        st.session_state.aaversion = __version__
+    if 'app_version' not in st.session_state:
+        st.session_state.app_version = __version__
 
     if 'llm_model' not in st.session_state:
         try:
@@ -91,16 +40,6 @@ def main():
         st.session_state.maze_obj = AAMaze(maze=maze, start=start, goal=goal)
         st.session_state.mouse_obj = AAMouse(aamaze=st.session_state.maze_obj, max_steps=MAX_STEPS)
 
-    # # Initialize solving state management variables
-    # if 'solving_active' not in st.session_state:
-    #     st.session_state.solving_active = False
-    #
-    # if 'solve_complete' not in st.session_state:
-    #     st.session_state.solve_complete = False
-    #
-    # if 'completion_reason' not in st.session_state:
-    #     st.session_state.completion_reason = ""
-
     if 'agent' not in st.session_state:
         st.session_state.agent = None
 
@@ -110,12 +49,10 @@ def main():
     left_col, right_col = st.columns([3,2])
 
     with left_col:
-        st.subheader("Maze Solving Strategy")
-
         user_input = st.text_area(
-            "Enter your maze-solving strategy in natural language:",
-            height=200,
-            placeholder="Example: Keep moving forward when possible. If blocked, turn right, then left, then backtrack. Always prefer unvisited paths...",
+            "Reach the customer as fast as you can",
+            height=128,
+            placeholder="Enter your strategy using natural language",
             key='strategy'
         )
 
@@ -152,12 +89,18 @@ def main():
                 st.error("Please enter a strategy first.")
 
         reasoning_box = st.empty()
+        st.divider()
+        mouse_state_box = st.empty()
 
     with right_col:
         if st.session_state.agent:
             maze_placeholder = st.empty()
 
-            reasoning_box.markdown(f"**AAgenticMouse** will crawl the maze using {st.session_state.llm_model}")
+            mouse_state = st.session_state.agent.get_status()
+            # st.session_state.mouse_state = mouse_state
+            mouse_state_box.markdown(mouse_state)
+            reasoning_str=f"**AAgenticMouse** will crawl the maze using {st.session_state.llm_model}"
+            reasoning_box.markdown(reasoning_str)
 
             # Initial render after instantiation
             render_data = st.session_state.agent.render_at_start()
@@ -173,7 +116,10 @@ def main():
                 st.session_state.reasoning_str = reasoning_str
 
                 # update left-column stream
-                reasoning_box.markdown(f"**Score**  \n\n{score}  \n\n  **Last Step Reasoning:**  \n\n{reasoning_str}")
+                mouse_state = st.session_state.agent.get_status()
+                # st.session_state.mouse_state = mouse_state
+                mouse_state_box.markdown(mouse_state)
+                reasoning_box.markdown(reasoning_str)
                 # time.sleep(0.1)
 
                 fig = render_payload_matplotlib(render_data)

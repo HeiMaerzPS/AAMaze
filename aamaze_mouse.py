@@ -9,13 +9,13 @@ from datetime import datetime
 
 import numpy as np
 
-__version__ = '20250925_1534'
+__version__ = '20250926_0917'
 
 MAX_STEPS = 5000
 JSON_OUT = True
-LOG_LEVEL = logging.WARNING #DEBUG
+LOG_LEVEL = logging.INFO #DEBUG
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 # Type aliases for clarity
 Position = Tuple[int, int]
@@ -81,11 +81,12 @@ def main():
             #     if write_json(fname_out=fname_out, data=aardvark):
             #         print(f"... wrote '{fname_out}'")
 
-        logger.debug("Demo complete!")
+        # logger.debug("Demo complete!")
         return True
 
     except Exception as e:
-        logger.exception(f"Error in main: {e}")
+        print(f"Error in main: {e}")
+        # logger.exception(f"Error in main: {e}")
         return False
 
 
@@ -170,13 +171,13 @@ class AAMaze:
         maze: np.ndarray,
         start: Position,
         goal: Position,
-        logger: Optional[logging.Logger] = None,
+        # logger: Optional[logging.Logger] = None,
     ):
         self.maze = np.asarray(maze, dtype=int)
         self.rows, self.cols = self.maze.shape
         self.start = start
         self.goal = goal
-        self.logger = logger or logging.getLogger(f"{__name__}.AAMaze")
+        # self.logger = logger or logging.getLogger(f"{__name__}.AAMaze")
 
         # Validate positions
         for pos, name in [(start, "start"), (goal, "goal")]:
@@ -184,7 +185,7 @@ class AAMaze:
                 raise ValueError(f"{name} {pos} must be on a free cell")
 
         # and log
-        self.logger.debug(f"{self.rows}x{self.cols} AAMaze instantiated, goal@{self.goal}, start@{self.start}")
+        # self.logger.debug(f"{self.rows}x{self.cols} AAMaze instantiated, goal@{self.goal}, start@{self.start}")
 
     def is_free(self, *, pos: Position) -> bool:
         """Check if position is within bounds and not a wall."""
@@ -321,7 +322,7 @@ class AAMouse:
             self, *,
             aamaze: AAMaze,
             max_steps: int = MAX_STEPS,
-            logger: Optional[logging.Logger] = None,
+            # logger: Optional[logging.Logger] = None,
             loop_window: int = 50,
             loop_repeat_threshold: int = 3,
     ):
@@ -340,7 +341,7 @@ class AAMouse:
                 break
         self.direction = (AAMouse.DIR_ORDER.index(chosen_abs) if chosen_abs is not None else 0)
 
-        self.logger = logger or aamaze.logger or logging.getLogger(f"{__name__}.AAMouse")
+        # self.logger = logger or aamaze.logger or logging.getLogger(f"{__name__}.AAMouse")
 
         # Movement tracking
         self.steps = 0
@@ -361,7 +362,7 @@ class AAMouse:
         self.stuck_counter = 0
 
         # and log
-        self.logger.debug(f"AAMouse instantiated, pos@{self.pos} facing {AAMouse.DIR_ORDER[self.direction]}")
+        # self.logger.debug(f"AAMouse instantiated, pos@{self.pos} facing {AAMouse.DIR_ORDER[self.direction]}")
 
     def _get_state(self) -> AgentState:
         """Get current state signature for loop detection."""
@@ -397,7 +398,7 @@ class AAMouse:
 
         if not self.maze.is_free(pos=next_pos):
             self.collisions += 1
-            self.logger.debug(f"Blocked at {next_pos}")
+            # self.logger.debug(f"Blocked at {next_pos}")
             return False
 
         # Execute move
@@ -631,6 +632,52 @@ class AAMouse:
         visited_counts = {k:v for k,v in visited_counts.items() if v>0}
 
         return visited_counts
+
+    def sense_compass(self) -> Dict[str, str]:
+        """
+        Get compass mapping of relative directions to cardinal directions.
+        Only includes directions that are not blocked by walls.
+
+        Returns
+        -------
+        Dict[str, str]
+            Dictionary mapping relative directions ('ahead', 'left', 'right', 'backtrack')
+            to cardinal directions ('N', 'E', 'S', 'W') for unblocked directions.
+        """
+        compass = {}
+
+        # Check ahead
+        ahead_dir = self.DIR_ORDER[self.direction]
+        dr, dc = self.DIRECTIONS[ahead_dir]
+        ahead_pos = (self.pos[0] + dr, self.pos[1] + dc)
+        if self.maze.is_free(pos=ahead_pos):
+            compass['ahead'] = ahead_dir
+
+        # Check left
+        left_dir_idx = (self.direction - 1) % 4
+        left_dir = self.DIR_ORDER[left_dir_idx]
+        dr, dc = self.DIRECTIONS[left_dir]
+        left_pos = (self.pos[0] + dr, self.pos[1] + dc)
+        if self.maze.is_free(pos=left_pos):
+            compass['left'] = left_dir
+
+        # Check right
+        right_dir_idx = (self.direction + 1) % 4
+        right_dir = self.DIR_ORDER[right_dir_idx]
+        dr, dc = self.DIRECTIONS[right_dir]
+        right_pos = (self.pos[0] + dr, self.pos[1] + dc)
+        if self.maze.is_free(pos=right_pos):
+            compass['right'] = right_dir
+
+        # Check backtrack
+        back_dir_idx = (self.direction + 2) % 4
+        back_dir = self.DIR_ORDER[back_dir_idx]
+        dr, dc = self.DIRECTIONS[back_dir]
+        back_pos = (self.pos[0] + dr, self.pos[1] + dc)
+        if self.maze.is_free(pos=back_pos):
+            compass['backtrack'] = back_dir
+
+        return compass
 
     def sense_goal_direction(self) -> Optional[str]:
         """
