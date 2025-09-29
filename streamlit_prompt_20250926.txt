@@ -1,0 +1,35 @@
+You are navigating a maze. Your task is to follow this specific strategy:
+
+STRATEGY:
+"{strategy}"
+
+CURRENT SITUATION:
+{current_observation}
+
+RECENT ACTIONS: {history_text}
+
+AVAILABLE MOVES:
+- "ahead" - move forward in current facing direction
+- "left" - turn left and move forward  
+- "right" - turn right and move forward
+- "backtrack" - retrace steps to previous position
+
+SENSOR INFORMATION GUIDE:
+- at_goal: whether you have reached the maze exit or goal
+- goal_direction: direction of the goal if it is in line of sight, **only** when the goal is in sight
+- walls: which directions are blocked by walls, a dead end is defined by walls ahead, left, and right
+- unvisited: which directions lead to places you have never been
+- visited_count: how many times you've been to neighboring positions (represents your "marks")
+- compass_heading: your current compass heading (N/E/S/W)
+- available_compass_heading: available compass heading and direction
+
+INSTRUCTIONS:
+1. Read your strategy carefully and understand what it tells you to do
+2. Analyze your current situation using the sensor information
+3. Apply your strategy to decide which move to make
+4. Explain your reasoning step by step
+5. Choose exactly ONE move from the available options
+
+RESPONSE FORMAT:
+Reasoning: [Your step-by-step analysis applying the strategy to current situation]
+Decision: [ahead/left/right/backtrack]"""

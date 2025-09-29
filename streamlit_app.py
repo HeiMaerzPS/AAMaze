@@ -8,7 +8,7 @@ from aagentic_mouse import AAgenticMouse
 
 MODEL = 'gpt-4.1-nano' #'gpt-5-nano' 'gpt-4.1-nano'
 MAX_STEPS = 128
-__version__ = '20250926_0917'
+__version__ = '20250929_0944'
 
 
 def main():
@@ -46,12 +46,12 @@ def main():
     st.session_state.at_goal, st.session_state.reasoning_str = False, ""
 
     # Split screen into two columns
-    left_col, right_col = st.columns([3,2])
+    left_col, right_col = st.columns([5,3])
 
     with left_col:
         user_input = st.text_area(
             "Reach the customer as fast as you can",
-            height=128,
+            height=160,
             placeholder="Enter your strategy using natural language",
             key='strategy'
         )
@@ -89,12 +89,14 @@ def main():
                 st.error("Please enter a strategy first.")
 
         reasoning_box = st.empty()
-        st.divider()
-        mouse_state_box = st.empty()
+        # st.divider()
+        # mouse_state_box = st.empty()
 
     with right_col:
         if st.session_state.agent:
             maze_placeholder = st.empty()
+
+            mouse_state_box = st.empty()
 
             mouse_state = st.session_state.agent.get_status()
             # st.session_state.mouse_state = mouse_state

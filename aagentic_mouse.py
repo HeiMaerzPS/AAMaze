@@ -21,9 +21,9 @@ from dotenv import load_dotenv
 from aamaze_mouse import AAMaze, AAMouse, get_default_maze, render_with_mouse
 
 # Constants and configuration
-MODEL = 'gpt-5-nano'  # Default OpenAI model 'gpt-4.1-nano'
-LOG_LEVEL = logging.INFO
-__version__ = '20250926_0917'
+MODEL = 'gpt-4.1-nano'  # Default OpenAI model 'gpt-4.1-nano' 'gpt-5-nano'
+LOG_LEVEL = logging.WARNING
+__version__ = '20250929_0944'
 
 # Regular expression to parse LLM action responses
 ACTION_RE = re.compile(
@@ -135,9 +135,9 @@ class AAgenticMouse:
         goal_dir = self.mouse.sense_goal_direction()  # Returns relative direction or None
         unvisited = self.mouse.sense_unvisited_directions()  # Returns ['ahead', 'left', 'right']
         visited = self.mouse.sense_visited_directions()  # Returns {'direction': count}
-        absolute_direction = self.mouse.sense_absolute_direction()  # Returns 'N'/'E'/'S'/'W'
+        # absolute_direction = self.mouse.sense_absolute_direction()  # Returns 'N'/'E'/'S'/'W'
         walls = self.mouse.sense_walls()  # Returns ['ahead', 'left', 'right']
-        compass = self.mouse.sense_compass()
+        # compass = self.mouse.sense_compass()
         loop = self.mouse.sense_loop_detected()
         stuck = self.mouse.sense_stuck()
 
@@ -149,8 +149,8 @@ class AAgenticMouse:
             "walls": walls,
             "unvisited": unvisited,
             "visited_count": visited,
-            "absolute_direction": absolute_direction,
-            "compass": compass,
+            # "absolute_direction": absolute_direction,
+            # "compass": compass,
             "loop": loop,
             "stuck": stuck,
         }
@@ -190,10 +190,10 @@ class AAgenticMouse:
         else:
             obs_parts.append(f"visited_count=[none]")
 
-        # Always include absolute direction for orientation
-        obs_parts.append(f"compass_heading={scan_info['absolute_direction']}")
-        lcl_compass_heading = [f"{v}={k}" for k,v in scan_info['compass'].items()]
-        obs_parts.append(f"available_compass_heading: [{', '.join(lcl_compass_heading)}]")
+        # # Always include absolute direction for orientation
+        # obs_parts.append(f"compass_heading={scan_info['absolute_direction']}")
+        # lcl_compass_heading = [f"{v}={k}" for k,v in scan_info['compass'].items()]
+        # obs_parts.append(f"available_compass_heading: [{', '.join(lcl_compass_heading)}]")
 
         # Combine all parts with consistent formatting
         return "**Scan:** " + ", ".join(obs_parts)
@@ -338,38 +338,85 @@ class AAgenticMouse:
             prompt = f"""You are navigating a maze. Your task is to follow this specific strategy:
 
 STRATEGY:
-"{strategy}"
+'{strategy}'
 
 CURRENT SITUATION:
 {current_observation}
 
-RECENT ACTIONS: {history_text}
+CURRENT SITUATION GUIDE:
+- at_goal: whether you have reached the maze exit or goal
+- goal_direction: direction of the goal if it is in line of sight (only appears when goal is visible)
+- walls: which relative directions are blocked by walls (a dead end = walls ahead, left, and right)
+- unvisited: which relative directions lead to places you have never been
+- visited_count: how many times you've been to neighboring positions (your "marks")
+- compass_heading: your current absolute orientation (N/E/S/W) - FOR REFERENCE ONLY
+- compass_to_direction_mapping: shows how compass directions map to your relative directions - FOR REFERENCE ONLY
 
-AVAILABLE MOVES:
+RECENT ACTIONS: 
+{history_text}
+
+IMPORTANT: Navigation Instructions
+=====================================
+You MUST choose moves based on your relative position (where you're facing):
 - "ahead" - move forward in current facing direction
 - "left" - turn left and move forward  
 - "right" - turn right and move forward
 - "backtrack" - retrace steps to previous position
+**DO NOT use compass directions (N/E/S/W) as commands. They are only provided as reference information.**
 
-SENSOR INFORMATION GUIDE:
-- at_goal: whether you have reached the maze exit or goal
-- goal_direction: direction of the goal if it is in line of sight, **only** when the goal is in sight
-- walls: which directions are blocked by walls, a dead end is defined by walls ahead, left, and right
-- unvisited: which directions lead to places you have never been
-- visited_count: how many times you've been to neighboring positions (represents your "marks")
-- compass_heading: your current compass heading (N/E/S/W)
-- available_compass_heading: available compass heading and direction
+RULES
+1) Decide using **relative** moves only. Output one of: ahead, left, right, backtrack.
+2) Use compass data only as extra context. If needed, translate compass labels via `available_compass_heading` into relative terms. Do not mention compass labels in the Decision.
 
 INSTRUCTIONS:
 1. Read your strategy carefully and understand what it tells you to do
 2. Analyze your current situation using the sensor information
 3. Apply your strategy to decide which move to make
-4. Explain your reasoning step by step
-5. Choose exactly ONE move from the available options
+4. When reasoning, think in terms of relative directions (ahead/left/right/backtrack)
+5. If you need to use compass information, translate it to relative directions using the mapping provided
+6. Choose exactly ONE move from: ahead, left, right, or backtrack
 
 RESPONSE FORMAT:
-Reasoning: [Your step-by-step analysis applying the strategy to current situation]
-Decision: [ahead/left/right/backtrack]"""
+Reasoning: [Your step-by-step analysis applying the strategy to current situation, using relative directions]
+Decision: [ahead/left/right/backtrack]
+            """
+
+            # Build comprehensive prompt for the LLM
+#             prompt = f"""You are navigating a maze. Your task is to follow this specific strategy:
+#
+# STRATEGY:
+# "{strategy}"
+#
+# CURRENT SITUATION:
+# {current_observation}
+#
+# RECENT ACTIONS: {history_text}
+#
+# AVAILABLE MOVES:
+# - "ahead" - move forward in current facing direction
+# - "left" - turn left and move forward
+# - "right" - turn right and move forward
+# - "backtrack" - retrace steps to previous position
+#
+# SENSOR INFORMATION GUIDE:
+# - at_goal: whether you have reached the maze exit or goal
+# - goal_direction: direction of the goal if it is in line of sight, **only** when the goal is in sight
+# - walls: which directions are blocked by walls, a dead end is defined by walls ahead, left, and right
+# - unvisited: which directions lead to places you have never been
+# - visited_count: how many times you've been to neighboring positions (represents your "marks")
+# - compass_heading: your current compass heading (N/E/S/W)
+# - available_compass_heading: available compass heading and direction
+#
+# INSTRUCTIONS:
+# 1. Read your strategy carefully and understand what it tells you to do
+# 2. Analyze your current situation using the sensor information
+# 3. Apply your strategy to decide which move to make
+# 4. Explain your reasoning step by step
+# 5. Choose exactly ONE move from the available options
+#
+# RESPONSE FORMAT:
+# Reasoning: [Your step-by-step analysis applying the strategy to current situation]
+# Decision: [ahead/left/right/backtrack]"""
 
 
             self.logger.debug(f"LLM Prompt:\n{prompt}")
@@ -479,20 +526,38 @@ Decision: [ahead/left/right/backtrack]"""
         self.is_initialized = True
         self.logger.debug("Workflow initialization complete")
 
+    def get_final_status(self, *, max_steps=None):
+        scan = self._perform_scan()
+
+        status_output = []
+
+        if scan['at_goal']:
+            status_output.append("**Goal Reached!**")
+        else:
+            if max_steps is not None:
+                status_output.append(f"**Max steps {max_steps} exceeded!**")
+
+        lcl_time_total = self.time_step_end - self.time_start
+        status_output.append(f"Total Steps: {self.mouse.steps}, Total Time: {lcl_time_total:.1f} seconds")
+
+        status_str = ' '.join(status_output)
+        return status_str
+
     def get_status(self):
         scan = self._perform_scan()
         status_output = []
         if scan['at_goal']:
             status_output.append("**Goal Reached!**")
-            lcl_time_label = 'Elapsed Time'
-        else:
             lcl_time_label = 'Total Time'
-
-        if scan['goal_visible'] and scan['goal_dir']:
-            status_output.append(f"Goal in line-of-sight, direction: {scan['goal_dir']}")
+        else:
+            lcl_time_label = 'Elapsed Time'
 
         lcl_time_total, lcl_time_step = self.time_step_end - self.time_start, self.time_step_end - self.time_step_start
         status_output.append(f"Total Steps: {self.mouse.steps:>3}, {lcl_time_label}: {lcl_time_total:.1f} seconds, Last Reasoning: {lcl_time_step:.1f} seconds.")
+
+        if scan['goal_visible'] and scan['goal_dir']:
+            status_output.append(f"**Goal in line-of-sight**, direction: {scan['goal_dir']}")
+
         lcl_walls, lcl_unvisited, lcl_visited = ', '.join(scan['walls']), ', '.join(scan['unvisited']), ' ,'.join([f"{k}={v}" for k,v in scan['visited_count'].items()])
         aardvark = []
         if lcl_walls:
@@ -575,8 +640,8 @@ Decision: [ahead/left/right/backtrack]"""
         history.append(action_result)
 
         # Keep only last 5 moves for context (prevents history from growing infinitely)
-        if len(history) > 5:
-            history = history[-5:]
+        if len(history) > 8:
+            history = history[-8:]
 
         # Update current state with fresh information
         self.current_state = {
@@ -649,6 +714,9 @@ def main():
             aard = agent.get_status()
             print(f"{aard}\n")
             print(render_with_mouse(maze=maze_obj, mouse=mouse))
+
+            aard = agent.get_final_status()
+            aard = agent.get_final_status(max_steps=999)
 
             # Safety check - avoid infinite loops
             if steps >= agent.step_budget:

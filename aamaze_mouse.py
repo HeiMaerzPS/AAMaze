@@ -13,7 +13,7 @@ __version__ = '20250926_0917'
 
 MAX_STEPS = 5000
 JSON_OUT = True
-LOG_LEVEL = logging.INFO #DEBUG
+LOG_LEVEL = logging.WARNING #DEBUG
 
 # logger = logging.getLogger(__name__)
 
@@ -113,7 +113,6 @@ def get_default_maze() -> Tuple[np.ndarray, Position, Position]:
         ], dtype=int)
         start = (1, 1)
         goal = (7, 5)
-
     else:
         maze = np.array([
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
