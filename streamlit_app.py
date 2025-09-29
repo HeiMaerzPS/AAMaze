@@ -8,7 +8,7 @@ from aagentic_mouse import AAgenticMouse
 
 MODEL = 'gpt-4.1-nano' #'gpt-5-nano' 'gpt-4.1-nano'
 MAX_STEPS = 128
-__version__ = '20250929_1947'
+__version__ = '20250929_2114'
 
 
 def main():

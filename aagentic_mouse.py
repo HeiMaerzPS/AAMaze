@@ -23,7 +23,7 @@ from aamaze_mouse import AAMaze, AAMouse, get_default_maze, render_with_mouse
 # Constants and configuration
 MODEL = 'gpt-4.1-nano'  # Default OpenAI model 'gpt-4.1-nano' 'gpt-5-nano'
 LOG_LEVEL = logging.WARNING
-__version__ = '20250929_1947'
+__version__ = '20250929_2114'
 
 # Regular expression to parse LLM action responses
 ACTION_RE = re.compile(

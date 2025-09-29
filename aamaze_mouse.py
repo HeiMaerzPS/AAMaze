@@ -9,7 +9,7 @@ from datetime import datetime
 
 import numpy as np
 
-__version__ = '20250929_1947'
+__version__ = '20250929_2114'
 
 MAX_STEPS = 5000
 JSON_OUT = True
@@ -257,7 +257,7 @@ class AAMaze:
             "trail_dark": {"points": trail_dark_pts, "radius": R["trail_dark"], "facecolor": COLORS["trail_dark"],
                            "alpha": 0.6},
             "trail_light": {"points": visited_backtrack, "radius": R["trail_light"], "facecolor": COLORS["trail_light"],
-                            "alpha": 0.2},
+                            "alpha": 0.4},
 
             "styles": {
                 "grid": {"alpha": 0.3},
@@ -719,14 +719,16 @@ class AAMouse:
             return self.maze.is_free(pos=to_pos)
 
         # Check each relative direction
-        for relative_dir in ['ahead', 'left', 'right']:
+        for relative_dir in ['ahead', 'left', 'right', 'backtrack']:
             # Get the cardinal direction for this relative direction
             if relative_dir == 'ahead':
                 card_dir_idx = self.direction
             elif relative_dir == 'left':
                 card_dir_idx = (self.direction - 1) % 4
-            else:  # right
+            elif relative_dir == 'right':
                 card_dir_idx = (self.direction + 1) % 4
+            else:  # backtrack
+                card_dir_idx = (self.direction + 2) % 4
 
             card_dir = self.DIR_ORDER[card_dir_idx]
 
