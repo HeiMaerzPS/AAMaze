@@ -23,7 +23,7 @@ from aamaze_mouse import AAMaze, AAMouse, get_default_maze, render_with_mouse
 # Constants and configuration
 MODEL = 'gpt-4.1-nano'  # Default OpenAI model 'gpt-4.1-nano' 'gpt-5-nano'
 LOG_LEVEL = logging.WARNING
-__version__ = '20250929_2114'
+__version__ = '20250930_1716'
 
 # Regular expression to parse LLM action responses
 ACTION_RE = re.compile(
@@ -406,7 +406,7 @@ STRATEGY:
 
 TERMINOLOGY NOTE: 
 In this maze, "goal" and "customer" refer to the same thing - your destination: the maze exit or goal. 
-You may see either term used interchangeably.
+You may see either term used interchangeably. 
 
 CURRENT SITUATION:
 {current_observation}
@@ -432,7 +432,7 @@ You MUST choose moves based on your relative position (where you're facing):
 INSTRUCTIONS:
 1. Read your strategy carefully and understand what it tells you to do. 
 2. Analyze your current situation using the sensor information
-3. Apply your strategy to decide which move to make
+3. Apply your strategy literally to decide which move to make
 4. When reasoning, think in terms of relative directions (ahead/left/right/backtrack)
 5. Choose exactly ONE move from: ahead, left, right, or backtrack
 

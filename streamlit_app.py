@@ -7,8 +7,8 @@ from aamaze_mouse import AAMaze, AAMouse, get_default_maze, MAX_STEPS
 from aagentic_mouse import AAgenticMouse
 
 MODEL = 'gpt-4.1-nano' #'gpt-5-nano' 'gpt-4.1-nano'
-MAX_STEPS = 128
-__version__ = '20250929_2114'
+MAX_STEPS = 100
+__version__ = '20250930_1716'
 
 
 def main():
@@ -64,6 +64,7 @@ def main():
                 st.session_state.maze_obj = AAMaze(maze=maze, start=start, goal=goal)
                 st.session_state.mouse_obj = AAMouse(aamaze=st.session_state.maze_obj, max_steps=MAX_STEPS)
                 st.session_state.steps = 0
+                st.session_state.at_goal = False
 
                 # Instantiate AAgenticMouse with the user's strategy
                 agent = AAgenticMouse(
