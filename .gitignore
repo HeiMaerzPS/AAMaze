@@ -84,3 +84,5 @@ __pycache__/
 *.zip
 /aa_data
 /history
+new_prompt_claude.txt
+new_prompt_openai.txt
